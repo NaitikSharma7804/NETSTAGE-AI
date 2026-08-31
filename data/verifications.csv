@@ -1,0 +1,4 @@
+verification_id,diagnosis_id,case_id,status,verification_command,verification_output,tester_notes
+VERIF-DEMO-FAIL-001,DIAG-NS-DNS-004-AUTO,NS-DNS-004,FAIL,ping 1.1.1.1 repeat 5,Success rate is 0 percent (0/5),Initial ACL update still did not permit UDP DNS return traffic; review ACL sequence and retest.
+VERIF-DEMO-FAIL-002,DIAG-NS-DHCP-001-AUTO,NS-DHCP-001,FAIL,ipconfig /renew,Windows IP Configuration: unable to contact DHCP server,The first remediation did not restore DHCP relay service; verify ip helper-address on the VLAN 10 subinterface.
+VERIF-DEMO-FAIL-003,DIAG-NS-ROUT-003-AUTO,NS-ROUT-003,FAIL,show ip ospf neighbor,Neighbor ID 10.3.3.3 state EXSTART,OSPF adjacency remains stuck after the initial change; compare MTU on both Gi0/1 interfaces before closing the case.

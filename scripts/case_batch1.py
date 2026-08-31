@@ -1,0 +1,155 @@
+import csv
+import os
+
+CASES = [
+    # 1. VLAN MISCONFIGURATIONS (5 cases)
+    {
+        "case_id": "NS-VLAN-001",
+        "title": "Access Port Assigned to Non-Existent VLAN",
+        "symptom": "Host PC-A connected to Switch SW1 port FastEthernet0/5 cannot communicate with other hosts in VLAN 20 or reach the default gateway.",
+        "topology_note": "PC-A (192.168.20.15/24) -> SW1 (Fa0/5) -> Router R1 (Sub-int Gi0/0.20 192.168.20.1/24)",
+        "show_outputs": "SW1# show vlan brief\nVLAN Name Status Ports\n---- -------------------------------- --------- -------------------------------\n1 default active Fa0/1, Fa0/2, Fa0/3, Fa0/4, Fa0/6\n10 Sales active Fa0/7, Fa0/8\n1002 fddi-default act/unsup\n\nSW1# show running-config interface FastEthernet0/5\ninterface FastEthernet0/5\n switchport access vlan 20\n switchport mode access\n!\nSW1# show interfaces FastEthernet0/5 status\nPort Name Status Vlan Duplex Speed Type\nFa0/5 PC-A-Link inactive 20 auto auto 10/100BaseTX",
+        "expected_fault": "VLAN 20 does not exist in the switch VLAN database, causing access port Fa0/5 to remain inactive/down.",
+        "osi_layer": "Layer 2 (Data Link)",
+        "concept": "VLAN",
+        "severity": "High",
+        "difficulty": "Easy",
+        "expected_next_command": "show vlan brief",
+        "expected_fix": "SW1(config)# vlan 20\nSW1(config-vlan)# name Engineering\nSW1(config-vlan)# exit",
+        "verification_method": "show vlan brief | include 20; ping 192.168.20.1 from PC-A (5/5 success)",
+        "tags": "vlan;layer2;switchport;database;inactive-port"
+    },
+    {
+        "case_id": "NS-VLAN-002",
+        "title": "Access Port Configured in Wrong VLAN",
+        "symptom": "PC-B is assigned IP 192.168.10.25 but cannot reach server 192.168.10.10 in the same IP subnet.",
+        "topology_note": "PC-B -> SW1 (Fa0/12) | Server -> SW1 (Fa0/10) | Both intended for VLAN 10 (Sales)",
+        "show_outputs": "SW1# show vlan brief\nVLAN Name Status Ports\n---- -------------------------------- --------- -------------------------------\n1 default active Fa0/1, Fa0/2\n10 Sales active Fa0/10, Fa0/11\n30 Marketing active Fa0/12, Fa0/13\n\nSW1# show mac address-table dynamic\n Mac Address Table\n-------------------------------------------\nVlan Mac Address Type Ports\n---- ----------- -------- -----\n 10 0060.2f8a.1101 DYNAMIC Fa0/10\n 30 0060.2f8a.2202 DYNAMIC Fa0/12",
+        "expected_fault": "Switch port Fa0/12 is configured in VLAN 30 instead of VLAN 10, isolating PC-B into a different broadcast domain.",
+        "osi_layer": "Layer 2 (Data Link)",
+        "concept": "VLAN",
+        "severity": "Medium",
+        "difficulty": "Easy",
+        "expected_next_command": "show running-config interface Fa0/12",
+        "expected_fix": "SW1(config)# interface Fa0/12\nSW1(config-if)# switchport access vlan 10\nSW1(config-if)# exit",
+        "verification_method": "ping 192.168.10.10 from PC-B (success rate is 100 percent)",
+        "tags": "vlan;access-port;broadcast-domain;mac-table"
+    },
+    {
+        "case_id": "NS-VLAN-003",
+        "title": "Voice and Data VLAN Encapsulation Conflict",
+        "symptom": "IP Phone 7960 boots but connected PC cannot receive IP address from Data VLAN 10 and phone registration fails on Voice VLAN 150.",
+        "topology_note": "PC -> IP-Phone (PC Port) -> SW1 (Fa0/18) [Data VLAN 10, Voice VLAN 150]",
+        "show_outputs": "SW1# show interfaces FastEthernet0/18 switchport\nName: Fa0/18\nSwitchport: Enabled\nAdministrative Mode: dynamic desirable\nOperational Mode: down\nAdministrative Trunking Encapsulation: dot1q\nOperational Trunking Encapsulation: native\nNegotiation of Trunking: On\nAccess Mode VLAN: 1 (default)\nTrunking Native Mode VLAN: 1 (default)\nVoice VLAN: none\n\nSW1# show running-config interface Fa0/18\ninterface FastEthernet0/18\n switchport mode dynamic desirable\n!",
+        "expected_fault": "Interface Fa0/18 is left in dynamic desirable mode with no access VLAN 10 and no auxiliary voice VLAN 150 configured.",
+        "osi_layer": "Layer 2 (Data Link)",
+        "concept": "VLAN",
+        "severity": "High",
+        "difficulty": "Medium",
+        "expected_next_command": "show interfaces Fa0/18 switchport",
+        "expected_fix": "SW1(config)# interface Fa0/18\nSW1(config-if)# switchport mode access\nSW1(config-if)# switchport access vlan 10\nSW1(config-if)# switchport voice vlan 150\nSW1(config-if)# spanning-tree portfast",
+        "verification_method": "show interfaces Fa0/18 switchport; verify Voice VLAN: 150 and Access VLAN: 10",
+        "tags": "vlan;voice-vlan;voip;switchport;portfast"
+    },
+    {
+        "case_id": "NS-VLAN-004",
+        "title": "Inter-VLAN Subinterface Encapsulation Mismatch",
+        "symptom": "VLAN 20 hosts can ping their gateway 192.168.20.1, but VLAN 30 hosts cannot ping their gateway 192.168.30.1 on Router-on-a-Stick.",
+        "topology_note": "SW1 (Trunk Gi0/1) -> R1 (Router-on-a-Stick Gi0/0.20 & Gi0/0.30)",
+        "show_outputs": "R1# show ip interface brief | include GigabitEthernet0/0\nGigabitEthernet0/0 unassigned YES unset up up\nGigabitEthernet0/0.20 192.168.20.1 YES manual up up\nGigabitEthernet0/0.30 192.168.30.1 YES manual up up\n\nR1# show running-config interface GigabitEthernet0/0.30\ninterface GigabitEthernet0/0.30\n encapsulation dot1Q 300\n ip address 192.168.30.1 255.255.255.0\n!",
+        "expected_fault": "Router subinterface Gi0/0.30 has mismatched 802.1Q tag 300 instead of VLAN tag 30.",
+        "osi_layer": "Layer 3 (Network)",
+        "concept": "VLAN",
+        "severity": "Critical",
+        "difficulty": "Medium",
+        "expected_next_command": "show running-config interface Gi0/0.30",
+        "expected_fix": "R1(config)# interface GigabitEthernet0/0.30\nR1(config-subif)# encapsulation dot1Q 30\nR1(config-subif)# ip address 192.168.30.1 255.255.255.0",
+        "verification_method": "ping 192.168.30.1 from VLAN 30 PC (success rate 100 percent)",
+        "tags": "vlan;inter-vlan;router-on-a-stick;dot1q;encapsulation"
+    },
+    {
+        "case_id": "NS-VLAN-005",
+        "title": "VTP Domain Mismatch Blocking VLAN Propagation",
+        "symptom": "Newly created VLAN 40 on Core Switch SW-Core is not appearing on Access Switch SW-Acc1, causing Fa0/2 users to drop off the network.",
+        "topology_note": "SW-Core (VTP Server) <---> SW-Acc1 (VTP Client) via Trunk Gi0/1",
+        "show_outputs": "SW-Core# show vtp status\nVTP Version : 2\nConfiguration Revision : 8\nMaximum VLANs supported locally : 255\nNumber of existing VLANs : 7\nVTP Operating Mode : Server\nVTP Domain Name : CISCO-LAB\nVTP Pruning Mode : Disabled\n\nSW-Acc1# show vtp status\nVTP Version : 2\nConfiguration Revision : 0\nMaximum VLANs supported locally : 255\nNumber of existing VLANs : 5\nVTP Operating Mode : Client\nVTP Domain Name : cisco-lab\nVTP Pruning Mode : Disabled",
+        "expected_fault": "VTP domain name is case-sensitive ('CISCO-LAB' vs 'cisco-lab'), preventing VTP VLAN database synchronization.",
+        "osi_layer": "Layer 2 (Data Link)",
+        "concept": "VLAN",
+        "severity": "Medium",
+        "difficulty": "Hard",
+        "expected_next_command": "show vtp status",
+        "expected_fix": "SW-Acc1(config)# vtp domain CISCO-LAB",
+        "verification_method": "show vlan brief on SW-Acc1 shows VLAN 40 active with config revision incremented",
+        "tags": "vlan;vtp;trunk;domain-mismatch;database-sync"
+    },
+
+    # 2. DEFAULT GATEWAY & IP/SUBNET (4 cases)
+    {
+        "case_id": "NS-GW-001",
+        "title": "Default Gateway Outside Host Subnet",
+        "symptom": "Workstation WS-1 (10.1.10.45/24) can reach local hosts on 10.1.10.0/24 but cannot reach the internet or default gateway 10.1.20.1.",
+        "topology_note": "WS-1 (10.1.10.45/24) -> SW1 -> R1 (Gateway interface Gi0/0 10.1.10.1/24)",
+        "show_outputs": "WS-1> ipconfig\nFastEthernet0 Connection:\n IP Address......................: 10.1.10.45\n Subnet Mask.....................: 255.255.255.0\n Default Gateway.................: 10.1.20.1\n\nR1# show ip interface brief | include GigabitEthernet0/0\nGigabitEthernet0/0 10.1.10.1 YES manual up up\n\nWS-1> ping 10.1.20.1\nPinging 10.1.20.1 with 32 bytes of data:\nRequest timed out.\nRequest timed out.",
+        "expected_fault": "Host default gateway is configured as 10.1.20.1, which belongs to a different subnet than host IP 10.1.10.45/24. Correct gateway is 10.1.10.1.",
+        "osi_layer": "Layer 3 (Network)",
+        "concept": "Gateway",
+        "severity": "High",
+        "difficulty": "Easy",
+        "expected_next_command": "show ip interface brief on R1; check host ipconfig",
+        "expected_fix": "Configure WS-1 Default Gateway to 10.1.10.1",
+        "verification_method": "ping 10.1.10.1 from WS-1 (0% loss, reply in <1ms)",
+        "tags": "gateway;ip;subnet;host-config;unreachable"
+    },
+    {
+        "case_id": "NS-GW-002",
+        "title": "Subnet Mask Mismatch Between Host and Router",
+        "symptom": "Host PC-3 with IP 172.16.1.130 can ping gateway 172.16.1.1, but hosts in upper range (e.g. 172.16.1.200) cannot communicate with PC-3.",
+        "topology_note": "PC-3 (172.16.1.130) -> SW1 -> Router R1 (Gi0/1 172.16.1.1/24)",
+        "show_outputs": "PC-3> ipconfig\nFastEthernet0 Connection:\n IP Address......................: 172.16.1.130\n Subnet Mask.....................: 255.255.255.128\n Default Gateway.................: 172.16.1.1\n\nR1# show running-config interface GigabitEthernet0/1\ninterface GigabitEthernet0/1\n ip address 172.16.1.1 255.255.255.0\n duplex auto\n speed auto\n!",
+        "expected_fault": "PC-3 has subnet mask 255.255.255.128 (/25), splitting 172.16.1.0/24 into two subnets. PC-3 considers gateway 172.16.1.1 on network 172.16.1.0/25 to be in a remote subnet.",
+        "osi_layer": "Layer 3 (Network)",
+        "concept": "Gateway",
+        "severity": "Medium",
+        "difficulty": "Medium",
+        "expected_next_command": "show ip interface Gi0/1 on R1; verify host mask",
+        "expected_fix": "Update PC-3 Subnet Mask to 255.255.255.0",
+        "verification_method": "ping 172.16.1.1 and ping 172.16.1.200 from PC-3 (100% success)",
+        "tags": "subnet;mask-mismatch;vlsm;gateway"
+    },
+    {
+        "case_id": "NS-GW-003",
+        "title": "Duplicate IP Address on Local Network",
+        "symptom": "Intermittent packet loss and ARP flapping between Server-A (192.168.1.50) and clients accessing web services.",
+        "topology_note": "Server-A (192.168.1.50) | Printer-1 (192.168.1.50) -> SW1 -> Clients",
+        "show_outputs": "SW1# show log\n%SYS-4-DUPLICATE_IP: 192.168.1.50 duplicate IP address received from 0010.1122.3344 on FastEthernet0/2 and 00e0.f789.abcd on FastEthernet0/14\n\nSW1# show ip arp | include 192.168.1.50\nProtocol Address Age (min) Hardware Addr Type Interface\nInternet 192.168.1.50 0 0010.1122.3344 ARPA Vlan1\nInternet 192.168.1.50 0 00e0.f789.abcd ARPA Vlan1",
+        "expected_fault": "Duplicate IP address 192.168.1.50 statically configured on both Server-A (Fa0/2) and Printer-1 (Fa0/14), causing ARP poisoning and MAC flapping.",
+        "osi_layer": "Layer 3 (Network)",
+        "concept": "Gateway",
+        "severity": "Critical",
+        "difficulty": "Medium",
+        "expected_next_command": "show ip arp; show log",
+        "expected_fix": "Reconfigure Printer-1 on Fa0/14 with static IP 192.168.1.55/24 or enable DHCP.",
+        "verification_method": "show ip arp shows single binding for 192.168.1.50; ping test steady 0% packet loss",
+        "tags": "duplicate-ip;arp;mac-flapping;ip-conflict"
+    },
+    {
+        "case_id": "NS-GW-004",
+        "title": "Host Assigned Subnet Network Address as Host IP",
+        "symptom": "Host Laptop-1 cannot send or receive any IP traffic despite link LED being green.",
+        "topology_note": "Laptop-1 -> SW1 -> R1 (Gi0/0 10.0.5.1/24)",
+        "show_outputs": "Laptop-1> ipconfig\nFastEthernet0 Connection:\n IP Address......................: 10.0.5.0\n Subnet Mask.....................: 255.255.255.0\n Default Gateway.................: 10.0.5.1\n\nR1# show ip arp\nProtocol Address Age (min) Hardware Addr Type Interface\nInternet 10.0.5.1 - 0001.9654.1201 ARPA GigabitEthernet0/0",
+        "expected_fault": "Laptop-1 is invalidly configured with host IP 10.0.5.0, which is the reserved Subnet/Network ID of 10.0.5.0/24.",
+        "osi_layer": "Layer 3 (Network)",
+        "concept": "Gateway",
+        "severity": "High",
+        "difficulty": "Easy",
+        "expected_next_command": "ipconfig on Laptop-1",
+        "expected_fix": "Assign valid host IP such as 10.0.5.50/24 to Laptop-1.",
+        "verification_method": "ping 10.0.5.1 from Laptop-1 (0% loss)",
+        "tags": "network-address;invalid-ip;subnet;host-config"
+    }
+]
+
+def append_cases(new_cases):
+    CASES.extend(new_cases)
