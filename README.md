@@ -1,240 +1,628 @@
-# 🛡️ NetSage AI: AI-Assisted Network Troubleshooting with Human Review
+# 🛡️ NetSage AI
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.32%2B-FF4B4B.svg)](https://streamlit.io)
-[![Pydantic](https://img.shields.io/badge/Pydantic-2.6%2B-E92063.svg)](https://docs.pydantic.dev/)
-[![SQLite](https://img.shields.io/badge/SQLite-Database-003B57.svg)](https://www.sqlite.org/)
-[![Tests](https://img.shields.io/badge/pytest-34%20passed-success.svg)](https://docs.pytest.org/)
+### Evidence-Based Cisco Network Troubleshooting with AI, Rule Validation & Human Review
 
-> **NetSage AI** is an evidence-driven network troubleshooting prototype for Cisco Packet Tracer and Cisco-style laboratory scenarios. It is an educational submission, not a live-network automation tool.
+NetSage AI is an AI-assisted network troubleshooting platform designed for **Cisco Packet Tracer and Cisco-style laboratory environments**.
 
----
+The system combines a deterministic Python rule engine with AI-based reasoning to analyze network problems, identify potential root causes, provide evidence-backed recommendations, and guide the user through human review and post-fix verification.
 
-## 📌 Core Architectural Principle
-
-> ### **AI ASSISTS. RULES VALIDATE. HUMANS DECIDE. VERIFICATION CONFIRMS.**
-
-```
-       CISCO PACKET TRACER / LAB
-                  │
-                  ▼
-         NETWORK SYMPTOM DATA
-                  │
-                  ▼
-        TOPOLOGY + SHOW OUTPUTS
-                  │
-                  ▼
-           FASTAPI BACKEND
-            │           │
-            ▼           ▼
-   PYTHON RULE ENGINE  AI / LLM REASONING
-            │           │
-            ▼           ▼
-         EVIDENCE FUSION ENGINE
-                  │
-                  ▼
-         STRUCTURED DIAGNOSIS
-                  │
-                  ▼
-        HUMAN REVIEW GATEWAY
-       ┌──────────┼──────────┐
-       ▼          ▼          ▼
-    ACCEPT       EDIT      REJECT
-       └──────────┬──────────┘
-                  ▼
-         FINAL HUMAN DECISION
-                  │
-                  ▼
-     MANUAL CISCO CONFIGURATION FIX
-                  │
-                  ▼
-         CLOSED-LOOP VERIFICATION
-             [ PASS / FAIL ]
-                  │
-                  ▼
-          SQLITE + PANDAS
-                  │
-                  ▼
-          STREAMLIT DASHBOARD
-             (Plotly Charts)
-```
+> **AI ASSISTS. RULES VALIDATE. HUMANS DECIDE. VERIFICATION CONFIRMS.**
 
 ---
 
-## 🚀 Key Features
+## 🎯 Project Objective
 
-1. **40 Canonical Troubleshooting Cases (`data/cases.csv`)**: Realistic Cisco CLI evidence covering 10 networking domains:
-   - **VLANs** (5 cases): Inactive ports, missing VLAN DB IDs, wrong switchports, voice VLAN conflicts, router-on-a-stick tags, VTP domain mismatches.
-   - **Default Gateway & Subnets** (4 cases): Gateway outside subnet, mask mismatches, duplicate IP collisions, host network ID assignments.
-   - **DHCP & Relay** (5 cases): Missing `ip helper-address`, pool exhaustion, gateway exclusion overlaps, option 3 gateway errors, untrusted DHCP snooping.
-   - **DNS Resolution** (4 cases): Host DNS typos, disabled domain lookup, missing A-records, firewall ACL blocking UDP port 53.
-   - **Routing & Protocols** (6 cases): Missing default static routes, OSPF area ID mismatches, OSPF MTU mismatch in EXSTART, unreachable next-hops, passive interface errors, asymmetric stateful TCP resets.
-   - **Access Control Lists** (5 cases): Implicit deny drops, inverted wildcard masks, directional placement errors, standard ACL over-filtering, missing TCP `established` keyword.
-   - **NAT & PAT** (4 cases): Missing `ip nat outside` boundaries, omitted `overload` keyword in PAT, NAT ACL missing subnet, static NAT port forwarding IP typos.
-   - **Wireless LAN** (3 cases): WPA2-PSK key mismatch, AP multi-SSID uplink access vs trunk mode, 2.4GHz radio administratively shutdown.
-   - **Trunking & Interfaces** (4 cases): Native VLAN mismatch, trunk allowed VLAN pruning, interface administratively shutdown, duplex mismatch with late collisions.
-   - **Advanced Scenarios** (5 cases): DTP dynamic auto negotiation locks, HSRP virtual IP mismatches, EtherChannel PAgP mode mismatches, BPDU Guard err-disable, static route inverted subnet masks.
+Network troubleshooting often requires engineers to analyze multiple Cisco CLI outputs, identify configuration errors, determine the root cause, apply a fix, and verify whether the problem has been resolved.
 
-2. **Deterministic Python Rule Engine (`rule_engine/`)**: 22 pure-Python static analysis rules that evaluate Cisco `show` command outputs to catch hard misconfigurations without LLM hallucination.
+NetSage AI aims to make this process faster and more structured by combining:
 
-3. **Structured AI Diagnosis (`ai/`)**: Pydantic schema validation requiring:
-   - Diagnosed Root Cause
-   - Calibrated Confidence Rating (`low`, `medium`, `high`)
-   - OSI Layer Classification (`Layer 1` through `Layer 7`)
-   - Explicit Cited Evidence Excerpts
-   - Recommended Next Diagnostic Cisco Command
-   - Step-by-Step Cisco CLI Fix Commands
-   - Alternative Potential Causes
+- 🤖 AI-assisted diagnosis
+- ⚙️ Deterministic networking rules
+- 📋 Evidence-based reasoning
+- 👤 Human-in-the-loop review
+- 🔧 Cisco CLI fix recommendations
+- ✅ Closed-loop verification
+- 📊 Analytics and audit logging
 
-4. **Evidence Fusion Engine (`backend/services/evidence_service.py`)**: Synthesizes deterministic rule findings with AI hypotheses, flagging conflicts transparently to human reviewers.
-
-5. **Human-in-the-Loop Review (`backend/services/review_service.py`)**: Reviewers can **ACCEPT**, **EDIT**, or **REJECT** diagnoses, with mandatory engineering rationale tracking.
-
-6. **Closed-Loop Fix Verification (`backend/services/verification_service.py`)**: Records post-remediation connectivity tests (ping, show commands) as **PASS** or **FAIL**.
-
-7. **Responsible AI Audit Ledger (`docs/responsible_ai.md`)**: Documents five reviewed correction scenarios where a human reviewer corrected an AI diagnosis.
-
-8. **100% Offline Demo Mode (`DEMO_MODE=true`)**: Operates seamlessly without external API keys or cloud dependencies.
+The project is designed as an **educational prototype** and does not autonomously modify live network devices.
 
 ---
 
-## 🛠️ Technology Stack
+# 🧠 How NetSage AI Works
 
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Network Lab** | Cisco Packet Tracer / CLI | Broken network simulation & verification |
-| **Backend API** | FastAPI + Uvicorn | RESTful API for cases, diagnosis, review, and verification |
-| **Validation** | Pydantic 2.x | Strict schema enforcement for LLM input/output |
-| **Rule Engine** | Pure Python 3.x | Deterministic static validation of Cisco show outputs |
-| **Database** | SQLite + SQLAlchemy | Persistent relational storage for cases, reviews, and audits |
-| **Data Analytics**| Pandas | Tabular data processing and statistical metric calculations |
-| **Frontend UI** | Streamlit | Multi-page interactive web dashboard |
-| **Visualizations**| Plotly | Interactive dynamic charting |
-| **Testing** | pytest | 34 automated unit and integration tests |
+```text
+Cisco Packet Tracer / Network Lab
+              │
+              ▼
+       Network Problem
+              │
+              ▼
+      CLI / Show Outputs
+              │
+              ▼
+       FastAPI Backend
+          │         │
+          ▼         ▼
+    Rule Engine    AI Reasoning
+          │         │
+          └────┬────┘
+               ▼
+        Evidence Fusion
+               │
+               ▼
+      Structured Diagnosis
+               │
+               ▼
+       Human Review Gate
+        │      │      │
+        ▼      ▼      ▼
+      ACCEPT  EDIT   REJECT
+               │
+               ▼
+        Final Decision
+               │
+               ▼
+     Manual Cisco Configuration
+               │
+               ▼
+       Verification Testing
+               │
+          ┌────┴────┐
+          ▼         ▼
+        PASS       FAIL
+               │
+               ▼
+        Database + Analytics
+               │
+               ▼
+       Streamlit Dashboard
 
----
+✨ Key Features
+1. 📚 40 Network Troubleshooting Cases
 
-## ⚡ Quick Start Guide
+The project includes 40 canonical Cisco troubleshooting scenarios covering multiple networking domains.
 
-### 1. Installation
-```powershell
-# Navigate to project directory
-cd c:\cisco
+Networking domains include:
+VLAN configuration
+Default Gateway & Subnetting
+DHCP & DHCP Relay
+DNS Resolution
+Routing & OSPF
+Access Control Lists
+NAT & PAT
+Wireless LAN
+Trunking & Interfaces
+Advanced Cisco scenarios
 
-# Install required dependencies
+Examples include:
+
+Incorrect default gateway
+Subnet mask mismatch
+Missing VLAN
+Incorrect switchport configuration
+Missing DHCP relay
+DNS configuration problems
+OSPF MTU mismatch
+ACL filtering errors
+NAT configuration issues
+BPDU Guard err-disable
+HSRP virtual IP mismatch
+EtherChannel configuration mismatch
+⚙️ Deterministic Rule Engine
+
+The rule_engine/ module contains pure Python networking validation rules.
+
+Unlike an LLM, deterministic rules provide predictable results for known configuration problems.
+
+The rule engine analyzes Cisco-style show command outputs and checks for issues such as:
+
+Invalid IP addresses
+Duplicate IP addresses
+Subnet inconsistencies
+Default gateway problems
+VLAN mismatches
+Interface shutdown states
+Duplex mismatches
+BPDU Guard errors
+Routing problems
+OSPF configuration mismatches
+ACL errors
+DHCP relay issues
+NAT configuration problems
+🤖 AI Diagnosis
+
+NetSage AI uses structured AI reasoning to generate a troubleshooting diagnosis.
+
+Each diagnosis is expected to contain:
+
+Root Cause
+Confidence Level
+OSI Layer
+Supporting Evidence
+Next Diagnostic Command
+Recommended Cisco CLI Fix
+Alternative Possible Causes
+
+AI responses are validated using Pydantic schemas to maintain a consistent structure.
+
+The system also supports a mock/offline AI provider for demonstrations.
+
+🔀 Evidence Fusion
+
+The Evidence Fusion layer combines:
+
+Deterministic Rule Findings
+            +
+       AI Diagnosis
+            +
+     Network Evidence
+            ↓
+      Evidence Fusion
+            ↓
+   Structured Diagnosis
+
+If the AI and rule engine disagree, the conflict is surfaced rather than hidden.
+
+This allows a human engineer to investigate the disagreement before accepting the diagnosis.
+
+👤 Human-in-the-Loop
+
+NetSage AI does not allow AI to make the final decision automatically.
+
+Every diagnosis can be:
+
+✅ ACCEPT
+
+The engineer agrees with the AI diagnosis.
+
+✏️ EDIT
+
+The engineer modifies the diagnosis based on additional knowledge or evidence.
+
+❌ REJECT
+
+The engineer determines that the diagnosis is incorrect.
+
+A reviewer must provide a reason for edits and rejections.
+
+🛡️ Responsible AI
+
+The project follows four major safety principles:
+
+AI ASSISTS
+     ↓
+RULES VALIDATE
+     ↓
+HUMANS DECIDE
+     ↓
+VERIFICATION CONFIRMS
+Safety Guardrails
+No Autonomous Network Changes
+AI does not directly modify routers, switches, or firewalls.
+Mandatory Human Review
+AI-generated diagnoses must pass through a human review step.
+Transparent AI Errors
+The system intentionally records cases where human reviewers correct AI diagnoses.
+Closed-Loop Verification
+A proposed fix is not considered successful until it is verified.
+🔧 Closed-Loop Verification
+
+After a fix is applied manually, the system records verification evidence such as:
+
+Ping Test
+   ↓
+Show Command
+   ↓
+Connectivity Check
+   ↓
+PASS / FAIL
+
+This prevents the system from assuming that a recommended fix actually worked.
+
+📊 Dashboard
+
+The project includes an interactive Streamlit dashboard.
+
+The dashboard provides:
+
+Home & Overview
+Troubleshoot & Diagnose
+Cases Catalog
+Human Review
+Analytics
+Responsible AI
+Technical / System information
+
+The dashboard also displays project metrics such as:
+
+Total troubleshooting cases
+AI diagnoses
+Human reviews
+AI agreement rate
+Verification success rate
+Corrected AI cases
+🖥️ Screenshots
+NetSage AI Dashboard
+
+Add your project screenshot here.
+
+![NetSage AI Dashboard](docs/images/dashboard.png)
+Troubleshooting Module
+
+Add screenshot here.
+
+![Troubleshooting](docs/images/troubleshooting.png)
+Human Review
+
+Add screenshot here.
+
+![Human Review](docs/images/human-review.png)
+🏗️ Project Structure
+NetSage-AI/
+│
+├── ai/
+│   ├── __init__.py
+│   └── ...
+│
+├── backend/
+│   ├── api/
+│   ├── database/
+│   ├── models/
+│   ├── services/
+│   ├── main.py
+│   └── ...
+│
+├── dashboard/
+│   └── app.py
+│
+├── data/
+│   ├── cases.csv
+│   ├── evaluations.csv
+│   ├── reviews.csv
+│   └── verifications.csv
+│
+├── demo/
+│   ├── scenario_walkthrough.md
+│   └── RECORDING_CHECKLIST.md
+│
+├── docs/
+│   ├── architecture.md
+│   ├── api.md
+│   ├── responsible_ai.md
+│   └── setup.md
+│
+├── rule_engine/
+│   ├── acl_rules.py
+│   ├── dhcp_rules.py
+│   ├── gateway_rules.py
+│   ├── interface_rules.py
+│   ├── ip_rules.py
+│   ├── nat_rules.py
+│   ├── routing_rules.py
+│   ├── subnet_rules.py
+│   ├── vlan_rules.py
+│   └── engine.py
+│
+├── scripts/
+│   ├── seed_db.py
+│   ├── validate_dataset.py
+│   ├── evaluate_ai.py
+│   └── ...
+│
+├── tests/
+│   ├── test_rule_engine.py
+│   ├── test_api_endpoints.py
+│   ├── test_human_workflow.py
+│   └── ...
+│
+├── .env.example
+├── requirements.txt
+├── start_netsage.py
+└── README.md
+🛠️ Technology Stack
+Technology	Purpose
+Python	Core application logic
+FastAPI	Backend REST API
+Uvicorn	API server
+Streamlit	Interactive dashboard
+Pydantic	Structured data & AI output validation
+SQLAlchemy	Database ORM
+SQLite	Persistent database
+Pandas	Data processing & analytics
+Plotly	Interactive visualizations
+pytest	Automated testing
+Cisco Packet Tracer	Network simulation environment
+🚀 Installation & Setup
+Prerequisites
+Python 3.10+
+Git
+Modern web browser
+Cisco Packet Tracer (for network lab scenarios)
+1. Clone the Repository
+git clone https://github.com/YOUR_USERNAME/NetSage-AI.git
+cd NetSage-AI
+2. Create a Virtual Environment
+Windows PowerShell
+python -m venv venv
+
+Activate it:
+
+.\venv\Scripts\Activate.ps1
+
+If PowerShell blocks activation:
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\venv\Scripts\Activate.ps1
+Linux / macOS
+python3 -m venv venv
+source venv/bin/activate
+3. Install Dependencies
 pip install -r requirements.txt
-```
+🔐 Environment Configuration
 
-### 2. Environment Configuration
-Create a `.env` file (or use defaults from `.env.example`):
-```ini
+Create a .env file based on .env.example.
+
+For offline demonstration:
+
 APP_ENV=development
 DATABASE_URL=sqlite:///./netsage.db
+
 LLM_PROVIDER=mock
 LLM_MODEL=mock-netsage-v1
+LLM_API_KEY=
+
 DEMO_MODE=true
-```
+Offline Demo Mode
 
-### 3. Initialize & Seed Database
-```powershell
+The project supports:
+
+DEMO_MODE=true
+
+This allows NetSage AI to run without an external AI API key.
+
+🗄️ Initialize the Database
+
+Run:
+
 python scripts/seed_db.py
-```
 
-### 4. Run the Backend API
-```powershell
+This initializes the SQLite database and loads the troubleshooting cases and demo review data.
+
+▶️ Running the Application
+Option 1 — Start Backend
+
+Run:
+
 uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
-```
-*Interactive Swagger API Docs available at: `http://127.0.0.1:8000/docs`*
 
-### 5. Run the Streamlit Dashboard
-```powershell
+Backend:
+
+http://127.0.0.1:8000
+
+Swagger API documentation:
+
+http://127.0.0.1:8000/docs
+Option 2 — Start Dashboard
+
+Open another terminal and activate the virtual environment.
+
+Then run:
+
 streamlit run dashboard/app.py --server.port 8501
-```
-*Access the Web UI at: `http://localhost:8501`*
 
----
+Open:
 
-## 🧪 Running Automated Tests
+http://localhost:8501
+Option 3 — Start the Project Launcher
 
-Run the complete test suite across all modules:
-```powershell
+The project also provides:
+
+python start_netsage.py
+
+This can be used as the main application launcher.
+
+🧪 Testing
+
+Run all automated tests:
+
 pytest -v tests/
-```
 
-Validate Canonical Dataset integrity (40 cases):
-```powershell
+Validate the troubleshooting dataset:
+
 python scripts/validate_dataset.py
-```
 
-Run Automated AI Evaluation Benchmark:
-```powershell
+Run the AI evaluation:
+
 python scripts/evaluate_ai.py
-```
+📡 REST API
 
----
+The FastAPI backend provides the following major endpoints:
 
-## 📡 Implemented REST API Endpoints
+Method	Endpoint	Purpose
+GET	/health	Check application health
+GET	/cases	List troubleshooting cases
+GET	/cases/{case_id}	Get a specific case
+POST	/cases	Create a case
+POST	/diagnose	Run AI + rule-based diagnosis
+POST	/validate	Run deterministic rule validation
+POST	/review	Submit human review
+GET	/reviews	View review history
+POST	/verify	Record verification result
+GET	/verifications	View verification records
+GET	/analytics	Retrieve analytics
+GET	/responsible-ai	View responsible AI audit cases
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/health` | Application health and readiness probe |
-| `GET` | `/cases` | List troubleshooting cases with optional filtering |
-| `GET` | `/cases/{case_id}` | Retrieve specific troubleshooting case |
-| `POST` | `/cases` | Create custom troubleshooting case |
-| `POST` | `/diagnose` | Execute full diagnostic pipeline (Rules + AI + Fusion) |
-| `POST` | `/validate` | Execute deterministic rule engine only |
-| `POST` | `/review` | Record human review (Accept / Edit / Reject) |
-| `GET` | `/reviews` | List all historical human review logs |
-| `POST` | `/verify` | Record fix verification outcome (Pass / Fail) |
-| `GET` | `/verifications` | List all fix verification records |
-| `GET` | `/analytics` | Real-time Pandas-aggregated metrics for dashboard |
-| `GET` | `/responsible-ai` | Audited human correction cases |
+Interactive documentation is available at:
 
----
+http://127.0.0.1:8000/docs
+📈 Example Diagnostic Workflow
 
-## ⚖️ Responsible AI: Documented Human Corrections
+Suppose a PC cannot communicate with another network.
 
-NetSage AI explicitly demonstrates that AI can make mistakes. Below are 5 documented cases where human reviewers caught and corrected AI hallucinations:
+The user provides:
 
-| Case ID | Flawed AI Diagnosis | Human Expert Correction | Reason for Correction |
-| :--- | :--- | :--- | :--- |
-| `NS-DNS-004` | Public DNS server 1.1.1.1 is offline across ISP link. | Firewall extended ACL OUTSIDE-IN permits TCP 53 but denies UDP 53 return traffic. | Show access-lists showed rule 10 only permitting TCP 53 while UDP DNS queries hit rule 30 deny. |
-| `NS-VLAN-005` | Physical cabling defect between SW-Core and SW-Acc1. | VTP domain name case mismatch ('CISCO-LAB' vs 'cisco-lab') prevented database sync. | Physical link was up/up with 0 errors. VTP status clearly showed case mismatch. |
-| `NS-DHCP-001` | DHCP Server at 192.168.50.10 has exhausted its IP allocation pool. | Router subinterface Gi0/0.10 is missing 'ip helper-address 192.168.50.10'. | Broadcast DHCP DISCOVER packets cannot cross subinterfaces without a relay agent. |
-| `NS-ADV-004` | Transceiver hardware failure or bad RJ-45 termination on Fa0/11. | Spanning-Tree BPDU Guard shut down port Fa0/11 into err-disabled state after receiving BPDUs. | Syslog explicitly logged `%SPANTREE-2-BLOCK_BPDUGUARD` and interface status `err-disabled`. |
-| `NS-ROUT-003` | OSPF Hello and Dead timer interval mismatch between R1 and R3. | MTU mismatch on Gi0/1 (1500 on R1 vs 1400 on R3) causes DBD drops in EXSTART. | Show interfaces showed MTU 1500 vs 1400, and syslog logged `Bad Length in DBD`. |
+Symptom:
+PC cannot access the internet
 
----
+Evidence:
+show ip interface brief
+show ip route
+show running-config
+show access-lists
 
-## 📊 Evaluation & Benchmark Results
+NetSage AI processes the information:
 
-From running `python scripts/evaluate_ai.py`:
-- **Total Canonical Cases**: 40
-- **AI Diagnosis Agreement Rate**: 100.0% (40/40)
-- **Deterministic Rule Detection Rate**: 57.5% (23/40)
-- **Human Acceptance Rate**: 70.0%
-- **Human Correction Rate**: 30.0% (5 deliberate corrections)
-- **Fix Verification Success Rate**: 90.0%
+1. Collect Evidence
+        ↓
+2. Run Rule Engine
+        ↓
+3. Generate AI Diagnosis
+        ↓
+4. Fuse Evidence
+        ↓
+5. Assign Confidence
+        ↓
+6. Human Reviews Diagnosis
+        ↓
+7. Engineer Applies Fix
+        ↓
+8. Verify Connectivity
 
----
+Example:
 
-## 🎥 5-Minute Demonstration Scenario
+Root Cause:
+Incorrect default gateway
 
-Refer to [`demo/scenario_walkthrough.md`](file:///c:/cisco/demo/scenario_walkthrough.md) for step-by-step instructions on presenting:
-1. **Broken Network Case (`NS-ACL-001`)**
-2. **Rule Engine & AI Evidence Fusion**
-3. **Human Review & Decision Recording**
-4. **Manual Fix Application & Verification**
-5. **Responsible AI Misdiagnosis Simulation & Human Correction (`NS-DNS-004`)**
-6. **Real-time Analytics Dashboard**
+Evidence:
+Host gateway does not belong to the configured subnet.
 
----
+Recommended Fix:
+Configure the correct default gateway.
 
-## ⚠️ Known Limitations & Future Roadmap
+Verification:
+Ping successful → PASS
+⚖️ Example of Human Correction
 
-- **Static CLI Parsing**: The current rule engine parses text outputs; future versions will support Cisco pyATS / Genie structured parsers.
-- **Physical Device Integration**: Currently targeted at Cisco Packet Tracer lab exports; direct Netmiko / RESTCONF live SSH ingestion is planned.
-- **Multi-Vendor Support**: Future releases will support Arista EOS, Juniper Junos, and Linux iptables/nftables.
-#   N E T S T A G E - A I  
- 
+NetSage AI intentionally demonstrates that AI can make incorrect diagnoses.
+
+For example:
+
+Case: DHCP Relay
+
+AI Diagnosis:
+
+DHCP server has exhausted its IP pool.
+
+Human Correction:
+
+The DHCP pool is available.
+
+The actual problem is a missing
+ip helper-address on the router subinterface.
+
+The system records this correction as part of its Responsible AI audit process.
+
+This demonstrates why the project uses:
+
+Human review instead of autonomous AI decisions.
+
+📊 Project Metrics
+
+The dashboard tracks metrics including:
+
+Total Cases
+AI Diagnoses
+Human Reviews
+AI Agreement Rate
+Verification Success Rate
+Corrected AI Cases
+
+These metrics help evaluate both the technical performance of the troubleshooting system and the effectiveness of human oversight.
+
+🎓 Educational Use
+
+NetSage AI is designed primarily for:
+
+Cisco networking education
+Network troubleshooting labs
+AI-assisted network diagnostics
+Cisco Packet Tracer demonstrations
+Responsible AI demonstrations
+Human-in-the-loop AI research
+Academic project demonstrations
+
+It is not intended to autonomously configure or modify production network infrastructure.
+
+🔒 Security & Safety
+
+NetSage AI follows a conservative architecture:
+
+No autonomous device configuration
+No automatic execution of Cisco CLI commands
+Human approval is required
+AI evidence is explicitly displayed
+AI/rule conflicts are surfaced
+Fixes require verification
+Review decisions are stored for auditing
+📚 Documentation
+
+Additional documentation is available in the docs/ directory:
+
+docs/setup.md — Installation and setup
+docs/architecture.md — System architecture
+docs/api.md — REST API documentation
+docs/responsible_ai.md — Responsible AI and human corrections
+demo/scenario_walkthrough.md — Demonstration workflow
+🚧 Project Status
+
+Status: Educational Prototype / Cisco Networking Lab Project
+
+The current implementation focuses on:
+
+Evidence-based troubleshooting
+Deterministic rule validation
+AI-assisted reasoning
+Human review
+Fix verification
+Analytics
+Responsible AI auditing
+
+Future improvements could include:
+
+Real Cisco device integrations
+More networking scenarios
+Additional vendor support
+Advanced topology analysis
+More LLM providers
+Automated evidence collection
+Improved diagnostic benchmarking
+👥 Team
+NetSage AI — Cisco Networking / AI Project
+
+Contributors:
+
+Add Team Member 1 — AI & Backend
+Add Team Member 2 — Network Rules & Dataset
+Add Team Member 3 — Dashboard & Analytics
+
+Update the contributor section with your actual team members and GitHub profiles.
+
+📄 License
+
+This project is intended for educational and academic use.
+
+Add an appropriate open-source license if you plan to distribute the project publicly.
+
+⭐ Key Takeaway
+
+NetSage AI is not designed to replace a network engineer.
+
+It is designed to assist the engineer with evidence-based diagnosis while keeping humans responsible for the final decision.
+
+        🤖 AI ASSISTS
+              ↓
+        ⚙️ RULES VALIDATE
+              ↓
+        👤 HUMANS DECIDE
+              ↓
+        ✅ VERIFICATION CONFIRMS
